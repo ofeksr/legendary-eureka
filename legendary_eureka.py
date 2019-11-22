@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
 
-import json
-import random
-import time
-
 import requests
+
 from bs4 import BeautifulSoup
 from linkedin import linkedin
 
@@ -36,102 +33,120 @@ class Indeed(Resource):
 
 
 class Glassdoor(Resource):
+
+    JOB_TYPES = ['fulltime', 'parttime', 'contract', 'internship', 'temporary', 'apprenticeship', 'entrylevel']
+
     def __init__(self):
         Resource.__init__(self, 'glassdoor')
 
     # TODO: wrap requests.post parts with try / except.
-    def get_jobs(self, job_title: str, job_location: str = None, job_type: str = ''):
+    def get_jobs(self, job_title: str, job_location: str = None, job_type: str = None):
         """
         using part of code from: https://gist.github.com/scrapehero/352286d0f9dee87990cd45c3f979e7cb
-        :param job_title: for example: 'python developer'
-        :param job_type: optional, 'fulltime' or ___ or ___ TODO: get job_type possibilities
-        :param job_location: Jerusalem (Israel), Tel Aviv-Yafo (Israel), Haifa (Israel), Ashdod (Israel),
-         Bnei Brak (Israel), Netanya (Israel), Bene Beraq (Israel), Bat Yam (Israel), Ramat Gan(Israel),
-         Ashqelon (Israel).
+        :param job_title: for example: 'python developer'.
+        :param job_type: (optional) as in JOB_TYPES class variable.
+        :param job_location: (optional, default = Israel) for search in specific Israel location, like: 'Tel Aviv'.
         """
 
-        headers = {'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-                   'accept-encoding': 'gzip, deflate, sdch, br',
-                   'accept-language': 'en-GB,en-US;q=0.8,en;q=0.6',
-                   'referer': 'https://www.glassdoor.com/',
-                   'upgrade-insecure-requests': '1',
-                   'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko)'
-                                 ' Ubuntu Chromium/51.0.2704.79 Chrome/51.0.2704.79 Safari/537.36',
-                   'Cache-Control': 'no-cache',
-                   'Connection': 'keep-alive'
-                   }
+        if job_location.lower().strip() == 'israel':
+            job_location = None
 
-        location_headers = {
-            'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.01',
-            'accept-encoding': 'gzip, deflate, sdch, br',
-            'accept-language': 'en-GB,en-US;q=0.8,en;q=0.6',
-            'referer': 'https://www.glassdoor.com/',
-            'upgrade-insecure-requests': '1',
+        if job_type is None:
+            job_type = ''
+        else:
+            if job_type.lower().strip() not in self.JOB_TYPES:
+                print(f'Job type {job_type} not found, searching for any job type instead.\n'
+                      f'acceptable job types are: {" / ".join(self.JOB_TYPES)}')
+                job_type = ''
+
+        headers = {
             'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko)'
                           ' Ubuntu Chromium/51.0.2704.79 Chrome/51.0.2704.79 Safari/537.36',
-            'Cache-Control': 'no-cache',
-            'Connection': 'keep-alive'
         }
-        data = {"term": 'Israel',
-                "maxLocationsToReturn": 10}
 
-        location_url = "https://www.glassdoor.co.in/findPopularLocationAjax.htm?"
+        job_listing_url = 'https://www.glassdoor.com/Job/jobs.htm'
 
-        # Getting location id for search location
-        print("Fetching location details")
-        location_response = requests.post(location_url, headers=location_headers, data=data).json()
+        if job_location:  # searching jobs in specific location
 
-        if job_location in [dictionary['label'] for dictionary in location_response]:
-            location_response = [dictionary for dictionary in location_response
-                                 if job_location in dictionary['label']]
-        else:
-            print('Job location not found, printing jobs from all locations in Israel..')
+            # Getting location id for search location
+            print("Fetching location details")
 
-        for i, location in enumerate(location_response):
-            job_listings = {}
-            place_id = location_response[i]['locationId']
-            place_label = location_response[i]['label']
+            location_headers = {
+                'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko)'
+                              ' Ubuntu Chromium/51.0.2704.79 Chrome/51.0.2704.79 Safari/537.36',
+            }
+            data = {
+                "term": 'Israel',
+                "maxLocationsToReturn": 9999  # true max is 1605
+            }
 
-            if place_id:
-                print("Fetching jobs for location: ", place_label)
+            location_url = "https://www.glassdoor.co.in/findPopularLocationAjax.htm?"
+            location_response = requests.post(location_url, headers=location_headers, data=data).json()
 
-                #  delay time for avoiding block by requests.post
-                #  TODO: change delay time with better (and faster) anti-block strategy.
-                if i > 0:
-                    delays = [3, 2, 1]
-                    delay = random.choice(delays)
-                    time.sleep(delay)
+        # TODO: consider loading all cities and matching loc_id from json file and skip this part and next if also (?)
+            for city_dict in location_response:
+                if city_dict['countryName'] == 'Israel':
+                    city_name = ' '.join(city_dict['label'].split()[:-1])
+                    if city_name.lower() == job_location.lower().strip():
+                        job_location = city_dict['label']
+                        break
 
-                job_listing_url = 'https://www.glassdoor.com/Job/jobs.htm'
+            if job_location in [dictionary['label'] for dictionary in location_response]:
+                location_response = [dictionary for dictionary in location_response
+                                     if job_location == dictionary['label']]
 
-                # Form data to get job results
-                data = {
-                    'clickSource': 'searchBtn',
-                    'sc.keyword': job_title,
-                    'locT': 'C',
-                    'locId': place_id,
-                    'jobType': job_type
-                }
+                loc_id = location_response[0]['locationId']
+                loc_label = location_response[0]['label']
 
-                response = requests.post(job_listing_url, headers=headers, data=data)
-                soup = BeautifulSoup(response.content, "html.parser")
+                if loc_id:
+                    print("Fetching jobs for location: ", loc_label)
 
-                for a in soup.find_all('a', href=True):
+                    # Form data to get job results
+                    loc_t = 'C'
+                    loc_id = loc_id
 
-                    if a['href'].startswith('/partner/'):
-                        link = a['href']
-                        full_link = 'https://www.glassdoor.com'+link  # TODO: shrink full links length with tiny url?
-                        job_id = link.split('jobListingId=')[1]
+            else:
+                print(f'Job location "{job_location}" not found')
+                return False
 
-                        if (a.string is not None) and (a.string != 'JobInfo'):
+        else:  # searching jobs in all Israel
+            print('Printing jobs from all locations in Israel')
+            loc_t = 'N'
+            loc_id = 119
 
-                            if place_label in job_listings:
-                                if job_id not in job_listings[place_label]:
-                                    job_listings[place_label].update({job_id: [a.string, full_link]})
-                                else:
-                                    if a.string not in job_listings[place_label][job_id]:
-                                        job_listings[place_label][job_id].append(a.string)
-                            else:
-                                job_listings[place_label] = {job_id: [a.string, full_link]}
+        data = {
+            'clickSource': 'searchBtn',
+            'sc.keyword': job_title,
+            'locT': loc_t,
+            'locId': loc_id,
+            'jobType': job_type
+        }
 
-                print(json.dumps(job_listings, indent=4, ensure_ascii=False))
+        response = requests.post(job_listing_url, headers=headers, data=data)
+        soup = BeautifulSoup(response.content, "html.parser")
+
+        job_listings = {}
+        for a in soup.find_all('a', href=True):
+
+            if a['href'].startswith('/partner/') and \
+                    (a.string is not None) and \
+                    (a.string != 'JobInfo'):
+
+                link = a['href']
+                full_link = 'https://www.glassdoor.com' + link
+                job_id = link.split('jobListingId=')[1]
+
+                if (job_location in job_listings) and (job_id not in job_listings[job_location]):
+                    job_listings[job_location].update({job_id: [a.string, full_link]})
+
+                elif (job_location in job_listings) and (a.string not in job_listings[job_location][job_id]):
+                    job_listings[job_location][job_id].append(a.string)
+
+                else:
+                    job_listings[job_location] = {job_id: [a.string, full_link]}
+
+        for val in job_listings.values():
+            for index, job_info in enumerate(val.values()):
+                print(f'#{index + 1} Job Title: {job_info[0]}\nJob URL: {job_info[1]}')
+
+        return True
