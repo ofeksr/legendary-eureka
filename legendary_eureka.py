@@ -33,7 +33,6 @@ class Indeed(Resource):
 
 
 class Glassdoor(Resource):
-
     JOB_TYPES = ['fulltime', 'parttime', 'contract', 'internship', 'temporary', 'apprenticeship', 'entrylevel']
 
     def __init__(self):
@@ -48,16 +47,16 @@ class Glassdoor(Resource):
         :param job_location: (optional, default = Israel) for search in specific Israel location, like: 'Tel Aviv'.
         """
 
-        if job_location.lower().strip() == 'israel':
+        if job_location and job_location.lower().strip() == 'israel':
             job_location = None
 
         if job_type is None:
             job_type = ''
-        else:
-            if job_type.lower().strip() not in self.JOB_TYPES:
-                print(f'Job type {job_type} not found, searching for any job type instead.\n'
-                      f'acceptable job types are: {" / ".join(self.JOB_TYPES)}')
-                job_type = ''
+
+        elif job_type.lower().strip() not in self.JOB_TYPES:
+            print(f'Job type {job_type} not found, searching for any job type instead.\n'
+                  f'acceptable job types are: {" / ".join(self.JOB_TYPES)}')
+            job_type = ''
 
         headers = {
             'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko)'
@@ -83,7 +82,8 @@ class Glassdoor(Resource):
             location_url = "https://www.glassdoor.co.in/findPopularLocationAjax.htm?"
             location_response = requests.post(location_url, headers=location_headers, data=data).json()
 
-        # TODO: consider loading all cities and matching loc_id from json file and skip this part and next if also (?)
+            # TODO: consider loading all cities and matching loc_id from json file
+            #  and skip this part and next if also (?)
             for city_dict in location_response:
                 if city_dict['countryName'] == 'Israel':
                     city_name = ' '.join(city_dict['label'].split()[:-1])
@@ -98,14 +98,14 @@ class Glassdoor(Resource):
                 loc_id = location_response[0]['locationId']
                 loc_label = location_response[0]['label']
 
-                if loc_id:
-                    print("Fetching jobs for location: ", loc_label)
-
-                    # Form data to get job results
-                    loc_t = 'C'
-                    loc_id = loc_id
+                # Form data to get job results
+                loc_t = 'C'
+                loc_id = loc_id
+                print("Fetching jobs for location: ", loc_label)
 
             else:
+                # TODO: add note in print message to look in help command that will show available cities
+                #  (from data/json file) for search.
                 print(f'Job location "{job_location}" not found')
                 return False
 
@@ -128,6 +128,7 @@ class Glassdoor(Resource):
         job_listings = {}
         for a in soup.find_all('a', href=True):
 
+            # filtering job links that not containing job title (clickable image/company name/location links)
             if a['href'].startswith('/partner/') and \
                     (a.string is not None) and \
                     (a.string != 'JobInfo'):
@@ -136,6 +137,7 @@ class Glassdoor(Resource):
                 full_link = 'https://www.glassdoor.com' + link
                 job_id = link.split('jobListingId=')[1]
 
+                # avoid possible duplicates by comparing details
                 if (job_location in job_listings) and (job_id not in job_listings[job_location]):
                     job_listings[job_location].update({job_id: [a.string, full_link]})
 
@@ -145,6 +147,7 @@ class Glassdoor(Resource):
                 else:
                     job_listings[job_location] = {job_id: [a.string, full_link]}
 
+        # printing jobs
         for val in job_listings.values():
             for index, job_info in enumerate(val.values()):
                 print(f'#{index + 1} Job Title: {job_info[0]}\nJob URL: {job_info[1]}')
