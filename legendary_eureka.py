@@ -46,10 +46,6 @@ class Glassdoor(Resource):
         :param job_type: (optional) as in JOB_TYPES class variable.
         :param job_location: (optional, default = Israel) for search in specific Israel location, like: 'Tel Aviv'.
         """
-
-        if job_location and job_location.lower().strip() == 'israel':
-            job_location = None
-
         if job_type is None:
             job_type = ''
 
@@ -65,21 +61,20 @@ class Glassdoor(Resource):
 
         job_listing_url = 'https://www.glassdoor.com/Job/jobs.htm'
 
-        if job_location:  # searching jobs in specific location
+        print('Fetching location details')
+        if job_location and job_location.lower().strip() != 'israel':  # searching jobs in specific location
 
             # Getting location id for search location
-            print("Fetching location details")
-
             location_headers = {
                 'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko)'
                               ' Ubuntu Chromium/51.0.2704.79 Chrome/51.0.2704.79 Safari/537.36',
             }
             data = {
-                "term": 'Israel',
-                "maxLocationsToReturn": 9999  # true max is 1605
+                'term': 'Israel',
+                'maxLocationsToReturn': 9999  # true max is 1605
             }
 
-            location_url = "https://www.glassdoor.co.in/findPopularLocationAjax.htm?"
+            location_url = 'https://www.glassdoor.co.in/findPopularLocationAjax.htm?'
             location_response = requests.post(location_url, headers=location_headers, data=data).json()
 
             # TODO: consider loading all cities and matching loc_id from json file
@@ -101,7 +96,7 @@ class Glassdoor(Resource):
                 # Form data to get job results
                 loc_t = 'C'
                 loc_id = loc_id
-                print("Fetching jobs for location: ", loc_label)
+                print(f'Fetching jobs for location: {loc_label}')
 
             else:
                 # TODO: add note in print message to look in help command that will show available cities
@@ -110,7 +105,8 @@ class Glassdoor(Resource):
                 return False
 
         else:  # searching jobs in all Israel
-            print('Printing jobs from all locations in Israel')
+            print('Fetching jobs for location: Israel')
+            job_location = 'Israel'
             loc_t = 'N'
             loc_id = 119
 
@@ -123,7 +119,7 @@ class Glassdoor(Resource):
         }
 
         response = requests.post(job_listing_url, headers=headers, data=data)
-        soup = BeautifulSoup(response.content, "html.parser")
+        soup = BeautifulSoup(response.content, 'html.parser')
 
         job_listings = {}
         for a in soup.find_all('a', href=True):
@@ -147,9 +143,5 @@ class Glassdoor(Resource):
                 else:
                     job_listings[job_location] = {job_id: [a.string, full_link]}
 
-        # printing jobs
-        for val in job_listings.values():
-            for index, job_info in enumerate(val.values()):
-                print(f'#{index + 1} Job Title: {job_info[0]}\nJob URL: {job_info[1]}')
-
-        return True
+        # return dictionary with search results: {job_location: {job_id: [job_title, job_link]}}
+        return job_listings

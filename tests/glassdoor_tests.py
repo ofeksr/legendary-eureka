@@ -14,40 +14,54 @@ class GlassdoorTestCase(unittest.TestCase):
         """
         Test all get_jobs function with all possible parameters.
         """
+
+        def zero():
+            return self.assertIsInstance(
+                self.glassdoor.get_jobs(
+                    job_title='Engineer',
+                    job_location='Haifa',
+                    job_type='fulltime'),
+                dict
+            )
+
+        def one():
+            return self.assertIsInstance(
+                self.glassdoor.get_jobs(
+                    job_title='Java',
+                    job_location='Tel Aviv'),
+                dict
+            )
+
+        def two():
+            return self.assertIsInstance(
+                self.glassdoor.get_jobs(
+                    job_title='Python Developer'),
+                dict
+            )
+
+        def three():
+            return self.assertFalse(
+                self.glassdoor.get_jobs(
+                    job_title='Engineer',
+                    job_location='Miami'
+                )
+            )
+
+        def sub_tests(key):
+            switcher = {
+                0: zero,
+                1: one,
+                2: two,
+                3: three,
+            }
+            return switcher.get(key, 'Invalid test key')
+
         for i in range(4):
-            sub_tests = ['all params', 'title and location', 'only title', 'wrong location']
-            current_sub_test = sub_tests[i]
+            sub_tests_names = ['all params', 'title and location', 'only title', 'wrong location']
 
-            with self.subTest(current_sub_test):
-
-                if i == 0:
-                    self.assertTrue(
-                        self.glassdoor.get_jobs(
-                            job_title='Engineer',
-                            job_location='Haifa',
-                            job_type='fulltime')
-                    )
-
-                elif i == 1:
-                    self.assertTrue(
-                        self.glassdoor.get_jobs(
-                            job_title='Engineer',
-                            job_location='Haifa')
-                    )
-
-                elif i == 2:
-                    self.assertTrue(
-                        self.glassdoor.get_jobs(
-                            job_title='Engineer')
-                    )
-
-                else:
-                    # Check false for city which not in Israel.
-                    self.assertFalse(
-                        self.glassdoor.get_jobs(
-                            job_title='Engineer',
-                            job_location='Miami')
-                    )
+            with self.subTest(sub_tests_names[i]):
+                func = sub_tests(i)
+                func()
 
 
 if __name__ == '__main__':
