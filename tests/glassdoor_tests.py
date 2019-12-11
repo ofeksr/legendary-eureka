@@ -15,7 +15,7 @@ class GlassdoorTestCase(unittest.TestCase):
         Test all get_jobs function with all possible parameters.
         """
 
-        def zero():
+        def all_params():
             return self.assertIsInstance(
                 self.glassdoor.get_jobs(
                     job_title='Engineer',
@@ -24,7 +24,7 @@ class GlassdoorTestCase(unittest.TestCase):
                 dict
             )
 
-        def one():
+        def title_and_location():
             return self.assertIsInstance(
                 self.glassdoor.get_jobs(
                     job_title='Java',
@@ -32,14 +32,14 @@ class GlassdoorTestCase(unittest.TestCase):
                 dict
             )
 
-        def two():
+        def only_title():
             return self.assertIsInstance(
                 self.glassdoor.get_jobs(
                     job_title='Python Developer'),
                 dict
             )
 
-        def three():
+        def wrong_location():
             return self.assertFalse(
                 self.glassdoor.get_jobs(
                     job_title='Engineer',
@@ -49,17 +49,16 @@ class GlassdoorTestCase(unittest.TestCase):
 
         def sub_tests(key):
             switcher = {
-                0: zero,
-                1: one,
-                2: two,
-                3: three,
+                0: all_params,
+                1: title_and_location,
+                2: only_title,
+                3: wrong_location,
             }
             return switcher.get(key, 'Invalid test key')
 
         for i in range(4):
-            sub_tests_names = ['all params', 'title and location', 'only title', 'wrong location']
 
-            with self.subTest(sub_tests_names[i]):
+            with self.subTest(sub_tests(i).__name__):
                 func = sub_tests(i)
                 func()
 

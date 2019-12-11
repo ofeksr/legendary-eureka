@@ -38,7 +38,6 @@ class Glassdoor(Resource):
     def __init__(self):
         Resource.__init__(self, 'glassdoor')
 
-    # TODO: wrap requests.post parts with try / except.
     def get_jobs(self, job_title: str, job_location: str = None, job_type: str = None):
         """
         using part of code from: https://gist.github.com/scrapehero/352286d0f9dee87990cd45c3f979e7cb
@@ -74,6 +73,7 @@ class Glassdoor(Resource):
                 'maxLocationsToReturn': 9999  # true max is 1605
             }
 
+            # TODO: wrap requests.post with try / except.
             location_url = 'https://www.glassdoor.co.in/findPopularLocationAjax.htm?'
             location_response = requests.post(location_url, headers=location_headers, data=data).json()
 
@@ -118,6 +118,7 @@ class Glassdoor(Resource):
             'jobType': job_type
         }
 
+        # TODO: wrap requests.post with try / except.
         response = requests.post(job_listing_url, headers=headers, data=data)
         soup = BeautifulSoup(response.content, 'html.parser')
 
@@ -131,7 +132,7 @@ class Glassdoor(Resource):
 
                 link = a['href']
                 full_link = 'https://www.glassdoor.com' + link
-                job_id = link.split('jobListingId=')[1]
+                job_id = int(link.split('jobListingId=')[1])
 
                 # avoid possible duplicates by comparing details
                 if (job_location in job_listings) and (job_id not in job_listings[job_location]):
