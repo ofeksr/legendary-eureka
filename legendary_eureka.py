@@ -87,7 +87,6 @@ class Indeed(Resource):
             if(i<len(wt)-1):
                 what+="+"
         url = "https://il.indeed.com/jobs?q="+str(what)+"&l="+str(where)+"&sort=date"
-        print(url)
         return url
 
     def get_soup(self, url):
@@ -155,14 +154,16 @@ class Indeed(Resource):
         return jobsDict
     
     def get_jobs(self, what, where):
-        url = self.get_page(what,where)
-        soup = self.get_soup(url)
-        if soup is not None:
-            jd = self.get_jobList(soup,url)
-            return jd
-        else:
-            return None
-
+        try:
+            url = self.get_page(what,where)
+            soup = self.get_soup(url)
+            if soup is not None:
+                jd = self.get_jobList(soup,url)
+                return jd
+            else:
+                return None
+        except:
+            print("An error occured.")
 
 class Glassdoor(Resource):
     JOB_TYPES = ['fulltime', 'parttime', 'contract', 'internship', 'temporary', 'apprenticeship', 'entrylevel']
