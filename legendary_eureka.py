@@ -4,7 +4,6 @@ import re
 import requests
 import urllib.request
 
-from linkedin import linkedin
 from bs4 import BeautifulSoup
 
 
@@ -46,12 +45,15 @@ class Linkedin(Resource):
             linksList = []
             for link in jobsList:
                 linksList.append(link.get('href'))
-            finalList = []
-            for job, company, link in zip(jobsList, companysList, linksList):
-                finalList.append(
-                    'Job Title: ' + str(job.getText()) + ',Comapny: ' + str(company.getText()) + ', Link:' + link)
+            # finalList = []
+            # for job, company, link in zip(jobsList, companysList, linksList):
+            #     finalList.append(
+            #         'Job Title: ' + str(job.getText()) + ',Comapny: ' + str(company.getText()) + ', Link:' + link)
             # Converting final list into dict
-            finalDict = {i: finalList[i] for i in range(0, len(finalList))}
+            # finalDict = {i: finalList[i] for i in range(0, len(finalList))}
+            finalDict = {}
+            for job, company, link in zip(jobsList, companysList, linksList):
+                finalDict[f'{str(job.getText())} - {str(company.getText())}'] = link
             return finalDict
         else:
             return None
@@ -60,8 +62,8 @@ class Linkedin(Resource):
 class Indeed(Resource):
     def __init__(self):
         Resource.__init__(self, 'indeed')
-    
-    
+
+
     def get_page(self, what,where):
         """ Takes the query attributes - 'what' (job description) and 'where' (area for job search)
             and build the right URL string for Indeed.com job search according to the rellevant preferences.
@@ -165,13 +167,13 @@ class Indeed(Resource):
         except:
             print("An error occured.")
 
+
 class Glassdoor(Resource):
     JOB_TYPES = ['fulltime', 'parttime', 'contract', 'internship', 'temporary', 'apprenticeship', 'entrylevel']
 
     def __init__(self):
         Resource.__init__(self, 'glassdoor')
 
-        
     def get_jobs(self, job_title: str, job_location: str = None, job_type: str = None):
         """
         using part of code from: https://gist.github.com/scrapehero/352286d0f9dee87990cd45c3f979e7cb
@@ -179,6 +181,9 @@ class Glassdoor(Resource):
         :param job_type: (optional) as in JOB_TYPES class variable.
         :param job_location: (optional, default = Israel) for search in specific Israel location, like: 'Tel Aviv'.
         """
+        if job_title is None:
+            return False
+
         if job_type is None:
             job_type = ''
 
@@ -207,12 +212,9 @@ class Glassdoor(Resource):
                 'maxLocationsToReturn': 9999  # true max is 1605
             }
 
-            # TODO: wrap requests.post with try / except.
             location_url = 'https://www.glassdoor.co.in/findPopularLocationAjax.htm?'
             location_response = requests.post(location_url, headers=location_headers, data=data).json()
 
-            # TODO: consider loading all cities and matching loc_id from json file
-            #  and skip this part and next if also (?)
             for city_dict in location_response:
                 if city_dict['countryName'] == 'Israel':
                     city_name = ' '.join(city_dict['label'].split()[:-1])
@@ -252,7 +254,6 @@ class Glassdoor(Resource):
             'jobType': job_type
         }
 
-        # TODO: wrap requests.post with try / except.
         response = requests.post(job_listing_url, headers=headers, data=data)
         soup = BeautifulSoup(response.content, 'html.parser')
 
@@ -278,5 +279,7 @@ class Glassdoor(Resource):
                 else:
                     job_listings[job_location] = {job_id: [a.string, full_link]}
 
-        # return dictionary with search results: {job_location: {job_id: [job_title, job_link]}}
-        return job_listings
+        # job_listings = {job_location: {job_id: [job_title, job_link]}}
+        # return dictionary with search results: {job_title: job_link}
+        job_listings_final = {arr[0]: arr[1] for arr in job_listings[job_location].values()}
+        return job_listings_final
