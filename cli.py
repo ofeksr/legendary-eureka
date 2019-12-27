@@ -5,25 +5,27 @@ from legendary_eureka import Glassdoor, Linkedin, Indeed
 # TODO: fix echo hebrew results - translate to english?
 
 
+def echo_dict_of_jobs(jobs):
+    for j_title, j_link in jobs.items():
+        click.echo(f'{j_title}:\n{j_link}')
+
+
 def get_linkedin(url):
     linkedin = Linkedin()
     jobs = linkedin.get_jobs(url=url)
-    for j_title, j_link in jobs.items():
-        click.echo(f'{j_title}:\n{j_link}')
+    echo_dict_of_jobs(jobs)
 
 
 def get_glassdoor(job_title, job_type, job_location):
     glassdoor = Glassdoor()
     jobs = glassdoor.get_jobs(job_title=job_title, job_type=job_type, job_location=job_location)
-    for j_title, j_link in jobs.items():
-        click.echo(f'{j_title}:\n{j_link}')
+    echo_dict_of_jobs(jobs)
 
 
 def get_indeed(job_title, job_location):
     indeed = Indeed()
     jobs = indeed.get_jobs(what=job_title, where=job_location)
-    for j_title, j_link in jobs.items():
-        click.echo(f'{j_title}:\n{j_link}')
+    echo_dict_of_jobs(jobs)
 
 
 @click.command()
@@ -48,16 +50,22 @@ def cli_get_jobs(resource, job_title, job_type, job_location, url):
         resource = resource.lower().strip()
         
     if resource == 'linkedin':
-        get_linkedin(url=url)
+        if url:
+            get_linkedin(url=url)
+        else:
+            click.echo('Linkedin resource requires job url input.')
 
     elif resource == 'glassdoor':
         get_glassdoor(job_title=job_title, job_type=job_type, job_location=job_location)
 
     elif resource == 'indeed':
-        get_indeed(job_title=job_title, job_location=job_location)
+        if job_location:
+            get_indeed(job_title=job_title, job_location=job_location)
+        else:
+            click.echo('Indeed resource requires job location input.')
     
     else:
-        click.echo(f'{resource}' is not a valid resource.)
+        click.echo(f'{resource} is not a valid resource.')
 
 
 if __name__ == '__main__':
