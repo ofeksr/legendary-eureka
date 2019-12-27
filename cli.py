@@ -38,15 +38,16 @@ def get_indeed(job_title, job_location):
               help='For Linkedin: url of job position to search similar jobs')
 def cli_get_jobs(resource, job_title, job_type, job_location, url):
     """CLI tool for searching students jobs in Israel, designed for students by students"""
-    if resource:
-        resource = resource.lower().strip()
 
     if not resource:
         # get_linkedin(url=url)
         get_indeed(job_title=job_title, job_location=job_location)
         get_glassdoor(job_title=job_title, job_type=job_type, job_location=job_location)
 
-    elif resource == 'linkedin':
+    else:
+        resource = resource.lower().strip()
+        
+    if resource == 'linkedin':
         get_linkedin(url=url)
 
     elif resource == 'glassdoor':
@@ -54,6 +55,9 @@ def cli_get_jobs(resource, job_title, job_type, job_location, url):
 
     elif resource == 'indeed':
         get_indeed(job_title=job_title, job_location=job_location)
+    
+    else:
+        click.echo(f'{resource}' is not a valid resource.)
 
 
 if __name__ == '__main__':
